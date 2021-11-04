@@ -1,5 +1,5 @@
 use std::env::consts::OS;
-use std::fmt::{self, Formatter, Display};
+use std::fmt::{self, Display, Formatter};
 use std::process::Command;
 
 extern crate sys_info;
@@ -9,7 +9,7 @@ use sys_info::*;
 struct Args<'a>(Vec<&'a str>);
 struct App<'a> {
     command: String,
-    args: Vec<&'a str>
+    args: Vec<&'a str>,
 }
 
 impl Display for Args<'_> {
@@ -40,7 +40,7 @@ fn run(apps: &[App]) {
 
                         match wait {
                             Err(error) => panic!("{}", error),
-                            Ok(_status) => continue
+                            Ok(_status) => continue,
                         }
                     }
                 };
@@ -103,7 +103,7 @@ fn run_with_response(apps: &[App]) {
 
                 let second_with_orphans = App {
                     command: second.command.clone(),
-                    args: [&second.args[..], &args[..]].concat()
+                    args: [&second.args[..], &args[..]].concat(),
                 };
 
                 run(&[second_with_orphans]);
@@ -115,7 +115,7 @@ fn run_with_response(apps: &[App]) {
 fn get_id(value: Option<String>) -> String {
     match value {
         Some(value) => value,
-        None => String::from("")
+        None => String::from(""),
     }
 }
 
@@ -123,21 +123,27 @@ fn main() {
     if OS == "linux" {
         let release = match linux_os_release() {
             Ok(value) => get_id(value.id),
-            Err(error) => panic!("Error {}", error)
+            Err(error) => panic!("Error {}", error),
         };
 
-        if release == "pop" {
+        if (release == "pop") || (release == "ubuntu") {
             let apt_update = App {
                 command: String::from("sudo"),
-                args: vec!["apt-get", "update"]
+                args: vec!["apt-get", "update"],
             };
             let apt_upgrade = App {
                 command: String::from("sudo"),
-                args: vec!["apt-get", "upgrade", "-y", "--allow-downgrades", "--with-new-pkgs"]
+                args: vec![
+                    "apt-get",
+                    "upgrade",
+                    "-y",
+                    "--allow-downgrades",
+                    "--with-new-pkgs",
+                ],
             };
             let apt_remove = App {
                 command: String::from("sudo"),
-                args: vec!["apt-get", "autoremove", "-y"]
+                args: vec!["apt-get", "autoremove", "-y"],
             };
             let apps: &[App] = &[apt_update, apt_upgrade, apt_remove];
 
@@ -147,19 +153,19 @@ fn main() {
         if release == "arch" {
             let pacman_keyring = App {
                 command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"]
+                args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"],
             };
             let pacman_update = App {
                 command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-Syu"]
+                args: vec!["pacman", "--noconfirm", "-Syu"],
             };
             let pacman_orphan_check = App {
                 command: String::from("pacman"),
-                args: vec!["-Qtdq"]
+                args: vec!["-Qtdq"],
             };
             let pacman_orphan_remove = App {
                 command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-Rns"]
+                args: vec!["pacman", "--noconfirm", "-Rns"],
             };
             let apps: &[App] = &[pacman_keyring, pacman_update];
             let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
@@ -172,15 +178,15 @@ fn main() {
     if OS == "macos" {
         let brew_update = App {
             command: String::from("brew"),
-            args: vec!["update"]
+            args: vec!["update"],
         };
         let brew_upgrade = App {
             command: String::from("brew"),
-            args: vec!["upgrade"]
+            args: vec!["upgrade"],
         };
         let brew_cleanup = App {
             command: String::from("brew"),
-            args: vec!["cleanup"]
+            args: vec!["cleanup"],
         };
         let apps: &[App] = &[brew_update, brew_upgrade, brew_cleanup];
 
@@ -190,7 +196,7 @@ fn main() {
     // update rust, should be the same on all platforms
     let rust_update = App {
         command: String::from("rustup"),
-        args: vec!["update"]
+        args: vec!["update"],
     };
     let apps: &[App] = &[rust_update];
 
