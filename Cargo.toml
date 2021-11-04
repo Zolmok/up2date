@@ -1,9 +1,9 @@
 [package]
 name = "up2date"
-version = "0.1.0"
-authors = ["Ricky Nelson <rickyn@socketwiz.com>"]
+version = "0.1.1"
+authors = ["Ricky Nelson <rickyn@zolmok.com>"]
 edition = "2018"
 
 [dependencies]
-scuttle = { git = "https://github.com/socketwiz/scuttle", branch="main" }
+scuttle = { git = "https://github.com/Zolmok/scuttle", branch="main" }
 sys-info = "0.9"
