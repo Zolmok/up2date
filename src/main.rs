@@ -139,7 +139,17 @@ fn main() {
         command: String::from("rustup"),
         args: vec!["update"],
     };
-    let apps: &[scuttle::App] = &[rust_update];
+    // update vim
+    let neovim_update = scuttle::App {
+        command: String::from("nvim"),
+        args: vec!["-c", "PlugUpdate", "-c", "qall"],
+    };
+    // update emacs
+    let emacs_update = scuttle::App {
+        command: String::from("emacs"),
+        args: vec!["--eval", "(update-emacs)", "--eval", "(kill-emacs)"],
+    };
+    let apps: &[scuttle::App] = &[rust_update, neovim_update, emacs_update];
 
     scuttle::run_apps(apps);
 }
