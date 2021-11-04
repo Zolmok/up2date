@@ -71,7 +71,7 @@ fn main() {
         };
 
         match release.as_deref() {
-            Some("pop") => {
+            Some("pop") | Some("ubuntu") => {
                 let apt_update = scuttle::App {
                     command: String::from("sudo"),
                     args: vec!["apt-get", "update"]
