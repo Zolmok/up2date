@@ -2,6 +2,10 @@ use std::env::consts::OS;
 use std::fmt::{self, Formatter, Display};
 use std::process::Command;
 
+extern crate sys_info;
+
+use sys_info::*;
+
 struct Args<'a>(Vec<&'a str>);
 struct App<'a> {
     command: String,
@@ -108,29 +112,61 @@ fn run_with_response(apps: &[App]) {
     }
 }
 
+fn get_id(value: Option<String>) -> String {
+    match value {
+        Some(value) => value,
+        None => String::from("")
+    }
+}
+
 fn main() {
     if OS == "linux" {
-        let pacman_keyring = App {
-            command: String::from("sudo"),
-            args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"]
+        let release = match linux_os_release() {
+            Ok(value) => get_id(value.id),
+            Err(error) => panic!("Error {}", error)
         };
-        let pacman_update = App {
-            command: String::from("sudo"),
-            args: vec!["pacman", "--noconfirm", "-Syu"]
-        };
-        let pacman_orphan_check = App {
-            command: String::from("pacman"),
-            args: vec!["-Qtdq"]
-        };
-        let pacman_orphan_remove = App {
-            command: String::from("sudo"),
-            args: vec!["pacman", "--noconfirm", "-Rns"]
-        };
-        let apps: &[App] = &[pacman_keyring, pacman_update];
-        let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
 
-        run(apps);
-        run_with_response(apps_with_response);
+        if release == "pop" {
+            let apt_update = App {
+                command: String::from("sudo"),
+                args: vec!["apt-get", "update"]
+            };
+            let apt_upgrade = App {
+                command: String::from("sudo"),
+                args: vec!["apt-get", "upgrade", "-y", "--allow-downgrades", "--with-new-pkgs"]
+            };
+            let apt_remove = App {
+                command: String::from("sudo"),
+                args: vec!["apt-get", "autoremove", "-y"]
+            };
+            let apps: &[App] = &[apt_update, apt_upgrade, apt_remove];
+
+            run(apps);
+        }
+
+        if release == "arch" {
+            let pacman_keyring = App {
+                command: String::from("sudo"),
+                args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"]
+            };
+            let pacman_update = App {
+                command: String::from("sudo"),
+                args: vec!["pacman", "--noconfirm", "-Syu"]
+            };
+            let pacman_orphan_check = App {
+                command: String::from("pacman"),
+                args: vec!["-Qtdq"]
+            };
+            let pacman_orphan_remove = App {
+                command: String::from("sudo"),
+                args: vec!["pacman", "--noconfirm", "-Rns"]
+            };
+            let apps: &[App] = &[pacman_keyring, pacman_update];
+            let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
+
+            run(apps);
+            run_with_response(apps_with_response);
+        }
     }
 
     if OS == "macos" {
@@ -150,4 +186,13 @@ fn main() {
 
         run(apps);
     }
+
+    // update rust, should be the same on all platforms
+    let rust_update = App {
+        command: String::from("rustup"),
+        args: vec!["update"]
+    };
+    let apps: &[App] = &[rust_update];
+
+    run(apps);
 }
