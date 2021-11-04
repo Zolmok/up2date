@@ -14,7 +14,9 @@ impl<'a, 'b> Display for Args<'a, 'b> {
     }
 }
 
-fn run(apps: &[&App]) {
+fn run(apps: &[&App], check: bool) -> bool {
+    let mut found: bool = false;
+
     for app in apps.iter() {
         println!("");
         println!("========================");
@@ -26,23 +28,29 @@ fn run(apps: &[&App]) {
             .spawn();
 
         match child {
-            Err(error) => panic!("{}", error),
+            Err(error) => panic!("P1{}", error),
             Ok(mut result) => {
                 match result.try_wait() {
-                    Err(error) => panic!("{}", error),
-                    Ok(Some(_status)) => continue,
+                    Err(error) => panic!("P2{}", error),
+                    Ok(Some(status)) => println!("S1{}", status),
                     Ok(None) => {
                         let wait = result.wait();
 
                         match wait {
-                            Err(error) => panic!("{}", error),
-                            Ok(_status) => continue
+                            Err(error) => panic!("P3{}", error),
+                            Ok(status) => {
+                                if status.success() == false && check == true {
+                                    found = true;
+                                }
+                            }
                         }
                     }
                 };
             }
         };
     }
+
+    found
 }
 
 fn main() {
@@ -54,6 +62,15 @@ fn main() {
         command: "sudo",
         args: &["pacman", "--noconfirm", "-Syu"]
     };
+    let pacman_orphan_check = App {
+        command: "pacman",
+        args: &["-Qtdq"]
+    };
+    let pacman_remove_orphans = App {
+        command: "sudo",
+        args: &["pacman", "--noconfirm", "-Rns", ]
+    };
+    sudo pacman --noconfirm -Rns $(pacman -Qtdq) # remove orphans
     let yay_update = App {
         command: "yay",
         args: &["-Syu"]
@@ -62,7 +79,10 @@ fn main() {
         command: "yay",
         args: &["-Yc"]
     };
-    let apps: &[&App] = &[&pacman_keyring, &pacman_update, &yay_update, &yay_cleanup];
+    let _apps: &[&App] = &[&pacman_keyring, &pacman_update, &yay_update, &yay_cleanup];
+    let check: &[&App] = &[&pacman_orphan_check];
 
-    run(apps);
+    //run(apps, false);
+    if run(check, true) {
+    }
 }
