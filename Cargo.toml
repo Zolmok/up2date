@@ -5,4 +5,5 @@ authors = ["Ricky Nelson <rickyn@socketwiz.com>"]
 edition = "2018"
 
 [dependencies]
+scuttle = { path = "../scuttle/" }
 sys-info = "0.9"

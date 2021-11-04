@@ -1,53 +1,10 @@
 use std::env::consts::OS;
-use std::fmt::{self, Display, Formatter};
 use std::process::Command;
 
+extern crate scuttle;
 extern crate sys_info;
 
 use sys_info::*;
-
-struct Args<'a>(Vec<&'a str>);
-struct App<'a> {
-    command: String,
-    args: Vec<&'a str>,
-}
-
-impl Display for Args<'_> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.join(" "))
-    }
-}
-
-fn run(apps: &[App]) {
-    for app in apps.iter() {
-        println!("");
-        println!("========================");
-        println!("$ {} {}", app.command, Args(app.args.clone()));
-        println!("========================");
-
-        let child = Command::new(app.command.clone())
-            .args(app.args.clone())
-            .spawn();
-
-        match child {
-            Err(error) => panic!("{}", error),
-            Ok(mut result) => {
-                match result.try_wait() {
-                    Err(error) => panic!("{}", error),
-                    Ok(Some(_status)) => continue,
-                    Ok(None) => {
-                        let wait = result.wait();
-
-                        match wait {
-                            Err(error) => panic!("{}", error),
-                            Ok(_status) => continue,
-                        }
-                    }
-                };
-            }
-        };
-    }
-}
 
 /// Run an app, check its output, conditionally run a second
 ///
@@ -74,15 +31,9 @@ fn run(apps: &[App]) {
 /// let apps_with_response: &[App] = &[first_app, second_app];
 /// run_with_response(apps_with_response);
 /// ```
-fn run_with_response(apps: &[App]) {
+fn run_with_response(apps: &[scuttle::App]) {
     let first = &apps[0];
     let second = &apps[1];
-
-    println!("");
-    println!("========================");
-    println!("$ {} {}", first.command, Args(first.args.clone()));
-    println!("========================");
-
     let first_child = Command::new(first.command.clone())
         .args(first.args.clone())
         .output();
@@ -101,104 +52,94 @@ fn run_with_response(apps: &[App]) {
                     }
                 }
 
-                let second_with_orphans = App {
+                let second_with_orphans = scuttle::App {
                     command: second.command.clone(),
                     args: [&second.args[..], &args[..]].concat(),
                 };
 
-                run(&[second_with_orphans]);
+                scuttle::run_apps(&[second_with_orphans]);
             }
         }
-    }
-}
-
-fn get_id(value: Option<String>) -> String {
-    match value {
-        Some(value) => value,
-        None => String::from(""),
     }
 }
 
 fn main() {
     if OS == "linux" {
         let release = match linux_os_release() {
-            Ok(value) => get_id(value.id),
-            Err(error) => panic!("Error {}", error),
+            Ok(value) => value.id,
+            Err(error) => panic!("Error {}", error)
         };
 
-        if (release == "pop") || (release == "ubuntu") {
-            let apt_update = App {
-                command: String::from("sudo"),
-                args: vec!["apt-get", "update"],
-            };
-            let apt_upgrade = App {
-                command: String::from("sudo"),
-                args: vec![
-                    "apt-get",
-                    "upgrade",
-                    "-y",
-                    "--allow-downgrades",
-                    "--with-new-pkgs",
-                ],
-            };
-            let apt_remove = App {
-                command: String::from("sudo"),
-                args: vec!["apt-get", "autoremove", "-y"],
-            };
-            let apps: &[App] = &[apt_update, apt_upgrade, apt_remove];
+        match release.as_deref() {
+            Some("pop") => {
+                let apt_update = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["apt-get", "update"]
+                };
+                let apt_upgrade = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["apt-get", "upgrade", "-y", "--allow-downgrades", "--with-new-pkgs"]
+                };
+                let apt_remove = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["apt-get", "autoremove", "-y"]
+                };
+                let apps: &[scuttle::App] = &[apt_update, apt_upgrade, apt_remove];
 
-            run(apps);
-        }
+                scuttle::run_apps(apps);
+            },
+            Some("arch") => {
+                let pacman_keyring = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"]
+                };
+                let pacman_update = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["pacman", "--noconfirm", "-Syu"]
+                };
+                let pacman_orphan_check = scuttle::App {
+                    command: String::from("pacman"),
+                    args: vec!["-Qtdq"]
+                };
+                let pacman_orphan_remove = scuttle::App {
+                    command: String::from("sudo"),
+                    args: vec!["pacman", "--noconfirm", "-Rns"]
+                };
+                let apps: &[scuttle::App] = &[pacman_keyring, pacman_update];
+                let apps_with_response: &[scuttle::App] = &[pacman_orphan_check, pacman_orphan_remove];
 
-        if release == "arch" {
-            let pacman_keyring = App {
-                command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-S", "archlinux-keyring"],
-            };
-            let pacman_update = App {
-                command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-Syu"],
-            };
-            let pacman_orphan_check = App {
-                command: String::from("pacman"),
-                args: vec!["-Qtdq"],
-            };
-            let pacman_orphan_remove = App {
-                command: String::from("sudo"),
-                args: vec!["pacman", "--noconfirm", "-Rns"],
-            };
-            let apps: &[App] = &[pacman_keyring, pacman_update];
-            let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
-
-            run(apps);
-            run_with_response(apps_with_response);
+                scuttle::run_apps(apps);
+                run_with_response(apps_with_response);
+            },
+            Some(&_) => panic!("ERROR: not sure what distribution this is"),
+            None => panic!("ERROR: not sure what distribution this is")
         }
     }
 
     if OS == "macos" {
-        let brew_update = App {
+        let brew_update = scuttle::App {
             command: String::from("brew"),
             args: vec!["update"],
         };
-        let brew_upgrade = App {
+        let brew_upgrade = scuttle::App {
             command: String::from("brew"),
             args: vec!["upgrade"],
         };
-        let brew_cleanup = App {
+        let brew_cleanup = scuttle::App {
             command: String::from("brew"),
             args: vec!["cleanup"],
         };
-        let apps: &[App] = &[brew_update, brew_upgrade, brew_cleanup];
+        let apps: &[scuttle::App] = &[brew_update, brew_upgrade, brew_cleanup];
 
-        run(apps);
+        scuttle::run_apps(apps);
     }
 
     // update rust, should be the same on all platforms
-    let rust_update = App {
+    let rust_update = scuttle::App {
         command: String::from("rustup"),
         args: vec!["update"],
     };
-    let apps: &[App] = &[rust_update];
+    let apps: &[scuttle::App] = &[rust_update];
 
-    run(apps);
+    scuttle::run_apps(apps);
 }
