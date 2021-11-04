@@ -1,0 +1,7 @@
+[package]
+name = "up2date"
+version = "0.1.0"
+authors = ["Ricky Nelson <rickyn@socketwiz.com>"]
+edition = "2018"
+
+[dependencies]
