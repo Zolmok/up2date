@@ -142,15 +142,11 @@ fn main() {
             command: String::from("brew"),
             args: vec!["upgrade"]
         };
-        let brew_cask_upgrade = App {
-            command: String::from("brew"),
-            args: vec!["cask", "upgrade"]
-        };
         let brew_cleanup = App {
             command: String::from("brew"),
             args: vec!["cleanup"]
         };
-        let apps: &[App] = &[brew_update, brew_upgrade, brew_cask_upgrade, brew_cleanup];
+        let apps: &[App] = &[brew_update, brew_upgrade, brew_cleanup];
 
         run(apps);
     }
