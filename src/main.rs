@@ -140,11 +140,11 @@ fn main() {
         args: vec!["update"],
     };
     // update vim
-    let neovim_update = scuttle::App {
-        command: String::from("nvim"),
-        args: vec!["-c", "PlugUpdate", "-c", "qall"],
-    };
-    let apps: &[scuttle::App] = &[rust_update, neovim_update];
+//    let neovim_update = scuttle::App {
+//        command: String::from("nvim"),
+//        args: vec!["-c", "PlugUpdate", "-c", "qall"],
+//    };
+    let apps: &[scuttle::App] = &[rust_update];
 
     scuttle::run_apps(apps);
 }
