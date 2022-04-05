@@ -4,26 +4,26 @@ version = 3
 
 [[package]]
 name = "cc"
-version = "1.0.70"
+version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26a6ce4b6a484fa3edb70f7efa6fc430fd2b87285fe8b84304fd0936faa0dc0"
+checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
 name = "libc"
-version = "0.2.103"
+version = "0.2.121"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd8f7255a17a627354f321ef0055d63b898c6fb27eff628af4d1b66b7331edf6"
+checksum = "efaa7b300f3b5fe8eb6bf21ce3895e1751d9665086af2d64b42f19701015ff4f"
 
 [[package]]
 name = "scuttle"
-version = "0.1.0"
-source = "git+https://github.com/Zolmok/scuttle?branch=main#1d7d3f19919b3082b27501c82d30c04499694a23"
+version = "0.2.0"
+source = "git+https://github.com/Zolmok/scuttle?branch=main#ce732edd6f43943a1fd7e87898a855c4e54d4f34"
 
 [[package]]
 name = "sys-info"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33fcecee49339531cf6bd84ecf3ed94f9c8ef4a7e700f2a1cac9cc1ca485383a"
+checksum = "0b3a0d0aba8bf96a0e1ddfdc352fc53b3df7f39318c71854910c3c4b024ae52c"
 dependencies = [
  "cc",
  "libc",
@@ -31,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "up2date"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "scuttle",
  "sys-info",

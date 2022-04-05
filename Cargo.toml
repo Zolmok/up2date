@@ -1,6 +1,6 @@
 [package]
 name = "up2date"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Ricky Nelson <rickyn@zolmok.com>"]
 edition = "2018"
 
