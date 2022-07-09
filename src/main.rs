@@ -1,10 +1,33 @@
 use std::env::consts::OS;
+use std::fmt::{self, Formatter, Display};
 use std::process::Command;
 
 extern crate scuttle;
 extern crate sys_info;
 
 use sys_info::*;
+
+pub struct Args(pub Vec<String>);
+
+impl Display for Args {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.join(" "))
+    }
+}
+
+fn run_apps(apps: &[scuttle::App]) {
+    for app in apps.iter() {
+        println!("");
+        println!("========================");
+        println!("$ {} {}", app.command, Args(app.args.to_owned()));
+        println!("========================");
+
+        match scuttle::run_app(app) {
+            Err(error) => panic!("panic{}", error),
+            Ok(_status) => continue,
+        };
+    }
+}
 
 /// Run an app, check its output, conditionally run a second
 ///
@@ -57,7 +80,7 @@ fn run_with_response(apps: &[scuttle::App]) {
                     args: [&second.args[..], &args[..]].concat(),
                 };
 
-                scuttle::run_apps(&[second_with_orphans]);
+                run_apps(&[second_with_orphans]);
             }
         }
     }
@@ -96,7 +119,7 @@ fn main() {
                 };
                 let apps: &[scuttle::App] = &[apt_update, apt_upgrade, apt_remove];
 
-                scuttle::run_apps(apps);
+                run_apps(apps);
             }
             Some("arch") => {
                 let pacman_keyring = scuttle::App {
@@ -132,7 +155,7 @@ fn main() {
                 let apps_with_response: &[scuttle::App] =
                     &[pacman_orphan_check, pacman_orphan_remove];
 
-                scuttle::run_apps(apps);
+                run_apps(apps);
                 run_with_response(apps_with_response);
             }
             Some(&_) => panic!("ERROR: not sure what distribution this is"),
@@ -155,7 +178,7 @@ fn main() {
         };
         let apps: &[scuttle::App] = &[brew_update, brew_upgrade, brew_cleanup];
 
-        scuttle::run_apps(apps);
+        run_apps(apps);
     }
 
     // update rust, should be the same on all platforms
@@ -170,5 +193,5 @@ fn main() {
     //    };
     let apps: &[scuttle::App] = &[rust_update];
 
-    scuttle::run_apps(apps);
+    run_apps(apps);
 }
