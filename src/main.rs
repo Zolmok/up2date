@@ -1,35 +1,31 @@
 use std::env::consts::OS;
-use std::fmt::{self, Formatter, Display};
-use std::process::Command;
+use sys_info::*;
+
+use scuttle::{App, Args};
 
 extern crate scuttle;
 extern crate sys_info;
 
-use sys_info::*;
-
-pub struct Args(pub Vec<String>);
-
-impl Display for Args {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.join(" "))
-    }
-}
-
-fn run_apps(apps: &[scuttle::App]) {
+/// Run a list of apps and print out the command and it's arguments before running
+///
+/// # Arguments
+///
+/// * `apps` - A vector of apps to run
+fn run_apps(apps: &[App]) {
     for app in apps.iter() {
         println!("");
         println!("========================");
         println!("$ {} {}", app.command, Args(app.args.to_owned()));
         println!("========================");
 
-        match scuttle::run_app(app) {
+        match scuttle::run_status(app) {
             Err(error) => panic!("panic{}", error),
             Ok(_status) => continue,
         };
     }
 }
 
-/// Run an app, check its output, conditionally run a second
+/// Run an app, check its output, conditionally run a second app
 ///
 /// Should be passed an array with exactly 2 Apps.
 /// The first App is run and its output is checked.
@@ -54,15 +50,11 @@ fn run_apps(apps: &[scuttle::App]) {
 /// let apps_with_response: &[App] = &[first_app, second_app];
 /// run_with_response(apps_with_response);
 /// ```
-fn run_with_response(apps: &[scuttle::App]) {
+fn run_with_response(apps: &[App]) {
     let first = &apps[0];
     let second = &apps[1];
-    let first_child = Command::new(first.command.clone())
-        .args(first.args.clone())
-        .output();
 
-    match first_child {
-        Err(error) => panic!("{}", error),
+    match scuttle::run_output(&first) {
         Ok(result) => {
             if result.stdout.len() > 0 {
                 let orphans = String::from_utf8_lossy(&result.stdout);
@@ -75,7 +67,7 @@ fn run_with_response(apps: &[scuttle::App]) {
                     }
                 }
 
-                let second_with_orphans = scuttle::App {
+                let second_with_orphans = App {
                     command: second.command.clone(),
                     args: [&second.args[..], &args[..]].concat(),
                 };
@@ -83,7 +75,36 @@ fn run_with_response(apps: &[scuttle::App]) {
                 run_apps(&[second_with_orphans]);
             }
         }
+        Err(error) => panic!("{}", error),
     }
+}
+
+/// Parse the output of `cargo install --list` and build a command to update the apps from the list
+///
+/// # Arguments
+///
+/// * `app` - An app of type `App`
+fn run_with_cargo(app: App) {
+    match scuttle::run_output(&app) {
+        Ok(output) => match std::str::from_utf8(&output.stdout) {
+            Ok(result) => {
+                result.lines().for_each(move |line| {
+                    if !line.starts_with(' ') {
+                        let parts: Vec<&str> = line.split(' ').collect();
+                        let cargo_app = parts[0];
+                        let cargo_install_app = App {
+                            command: String::from("cargo"),
+                            args: vec!["install".to_string(), cargo_app.to_string()],
+                        };
+
+                        run_apps(&[cargo_install_app]);
+                    }
+                });
+            }
+            Err(error) => println!("error:{}", error),
+        },
+        Err(error) => panic!("panic:{}", error),
+    };
 }
 
 fn main() {
@@ -95,11 +116,11 @@ fn main() {
 
         match release.as_deref() {
             Some("pop") | Some("ubuntu") => {
-                let apt_update = scuttle::App {
+                let apt_update = App {
                     command: String::from("sudo"),
                     args: vec!["apt-get".to_string(), "update".to_string()],
                 };
-                let apt_upgrade = scuttle::App {
+                let apt_upgrade = App {
                     command: String::from("sudo"),
                     args: vec![
                         "apt-get".to_string(),
@@ -109,7 +130,7 @@ fn main() {
                         "--with-new-pkgs".to_string(),
                     ],
                 };
-                let apt_remove = scuttle::App {
+                let apt_remove = App {
                     command: String::from("sudo"),
                     args: vec![
                         "apt-get".to_string(),
@@ -117,12 +138,12 @@ fn main() {
                         "-y".to_string(),
                     ],
                 };
-                let apps: &[scuttle::App] = &[apt_update, apt_upgrade, apt_remove];
+                let apps: &[App] = &[apt_update, apt_upgrade, apt_remove];
 
                 run_apps(apps);
             }
             Some("arch") => {
-                let pacman_keyring = scuttle::App {
+                let pacman_keyring = App {
                     command: String::from("sudo"),
                     args: vec![
                         "pacman".to_string(),
@@ -131,7 +152,7 @@ fn main() {
                         "archlinux-keyring".to_string(),
                     ],
                 };
-                let pacman_update = scuttle::App {
+                let pacman_update = App {
                     command: String::from("sudo"),
                     args: vec![
                         "pacman".to_string(),
@@ -139,11 +160,11 @@ fn main() {
                         "-Syu".to_string(),
                     ],
                 };
-                let pacman_orphan_check = scuttle::App {
+                let pacman_orphan_check = App {
                     command: String::from("pacman"),
                     args: vec!["-Qtdq".to_string()],
                 };
-                let pacman_orphan_remove = scuttle::App {
+                let pacman_orphan_remove = App {
                     command: String::from("sudo"),
                     args: vec![
                         "pacman".to_string(),
@@ -151,9 +172,8 @@ fn main() {
                         "-Rns".to_string(),
                     ],
                 };
-                let apps: &[scuttle::App] = &[pacman_keyring, pacman_update];
-                let apps_with_response: &[scuttle::App] =
-                    &[pacman_orphan_check, pacman_orphan_remove];
+                let apps: &[App] = &[pacman_keyring, pacman_update];
+                let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
 
                 run_apps(apps);
                 run_with_response(apps_with_response);
@@ -164,34 +184,48 @@ fn main() {
     }
 
     if OS == "macos" {
-        let brew_update = scuttle::App {
+        let brew_update = App {
             command: String::from("brew"),
             args: vec!["update".to_string()],
         };
-        let brew_upgrade = scuttle::App {
+        let brew_upgrade = App {
             command: String::from("brew"),
             args: vec!["upgrade".to_string()],
         };
-        let brew_cleanup = scuttle::App {
+        let brew_cleanup = App {
             command: String::from("brew"),
             args: vec!["cleanup".to_string()],
         };
-        let apps: &[scuttle::App] = &[brew_update, brew_upgrade, brew_cleanup];
+        let apps: &[App] = &[brew_update, brew_upgrade, brew_cleanup];
 
         run_apps(apps);
     }
 
     // update rust, should be the same on all platforms
-    let rust_update = scuttle::App {
+    let rust_update = App {
         command: String::from("rustup"),
         args: vec!["update".to_string()],
     };
     // update vim
-    //    let neovim_update = scuttle::App {
-    //        command: String::from("nvim"),
-    //        args: vec!["-c", "PlugUpdate", "-c", "qall"],
-    //    };
-    let apps: &[scuttle::App] = &[rust_update];
+    let neovim_update = App {
+        command: String::from("nvim"),
+        args: vec![
+            "--headless".to_string(),
+            "-c".to_string(),
+            "autocmd User PackerComplete quitall".to_string(),
+            "-c".to_string(),
+            "PackerUpdate".to_string(),
+        ],
+    };
+    let apps: &[App] = &[rust_update, neovim_update];
 
     run_apps(apps);
+
+    // update all rust apps installed with cargo
+    let cargo_list_apps = App {
+        command: String::from("cargo"),
+        args: vec!["install".to_string(), "--list".to_string()],
+    };
+
+    run_with_cargo(cargo_list_apps);
 }

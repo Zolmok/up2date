@@ -1,9 +1,9 @@
 [package]
 name = "up2date"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Ricky Nelson <rickyn@zolmok.com>"]
 edition = "2021"
 
 [dependencies]
-scuttle = { git = "https://github.com/Zolmok/scuttle", tag="v0.3.0" }
+scuttle = { git = "https://github.com/Zolmok/scuttle", tag="v0.4.0" }
 sys-info = "0.9"

@@ -16,7 +16,8 @@ checksum = "efaa7b300f3b5fe8eb6bf21ce3895e1751d9665086af2d64b42f19701015ff4f"
 
 [[package]]
 name = "scuttle"
-version = "0.3.0"
+version = "0.4.0"
+source = "git+https://github.com/Zolmok/scuttle?tag=v0.4.0#9a183a9c303e83d2bfa90a3f7fc9ec740f45afbe"
 
 [[package]]
 name = "sys-info"
@@ -30,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "up2date"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "scuttle",
  "sys-info",
