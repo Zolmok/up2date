@@ -115,7 +115,7 @@ fn main() {
         };
 
         match release.as_deref() {
-            Some("pop") | Some("ubuntu") => {
+            Some("ubuntu") | Some("pop") => {
                 let apt_update = App {
                     command: String::from("sudo"),
                     args: vec!["apt-get".to_string(), "update".to_string()],
@@ -142,7 +142,7 @@ fn main() {
 
                 run_apps(apps);
             }
-            Some("arch") => {
+            Some("arch") | Some("endeavouros") => {
                 let pacman_keyring = App {
                     command: String::from("sudo"),
                     args: vec![
@@ -178,8 +178,8 @@ fn main() {
                 run_apps(apps);
                 run_with_response(apps_with_response);
             }
-            Some(&_) => panic!("ERROR: not sure what distribution this is"),
-            None => panic!("ERROR: not sure what distribution this is"),
+            Some(os_name) => panic!("ERROR: not sure what OS this is:{}", os_name),
+            None => panic!("ERROR: not sure what OS this is"),
         }
     }
 
