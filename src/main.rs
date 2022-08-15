@@ -173,24 +173,24 @@ fn main() {
                     ],
                 };
 
-                let yum_update = App {
-                    command: String::from("yum"),
+                let yay_update = App {
+                    command: String::from("yay"),
                     args: vec!["--noconfirm".to_string(), "-Syu".to_string()],
                 };
-                let yum_orphan_check = App {
-                    command: String::from("yum"),
+                let yay_orphan_check = App {
+                    command: String::from("yay"),
                     args: vec!["-Qtdq".to_string()],
                 };
-                let yum_orphan_remove = App {
-                    command: String::from("yum"),
+                let yay_orphan_remove = App {
+                    command: String::from("yay"),
                     args: vec!["--noconfirm".to_string(), "-Rns".to_string()],
                 };
-                let apps: &[App] = &[pacman_keyring, pacman_update, yum_update];
+                let apps: &[App] = &[pacman_keyring, pacman_update, yay_update];
                 let apps_with_response: &[App] = &[
                     pacman_orphan_check,
                     pacman_orphan_remove,
-                    yum_orphan_check,
-                    yum_orphan_remove,
+                    yay_orphan_check,
+                    yay_orphan_remove,
                 ];
 
                 run_apps(apps);

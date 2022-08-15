@@ -15,7 +15,7 @@
     },
     {
       "name": "Run",
-      "actions": ["cargo watch -x run"],
+      "actions": [],
       "pwd": ".",
       "select": false
     },
