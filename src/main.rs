@@ -172,8 +172,26 @@ fn main() {
                         "-Rns".to_string(),
                     ],
                 };
-                let apps: &[App] = &[pacman_keyring, pacman_update];
-                let apps_with_response: &[App] = &[pacman_orphan_check, pacman_orphan_remove];
+
+                let yum_update = App {
+                    command: String::from("yum"),
+                    args: vec!["--noconfirm".to_string(), "-Syu".to_string()],
+                };
+                let yum_orphan_check = App {
+                    command: String::from("yum"),
+                    args: vec!["-Qtdq".to_string()],
+                };
+                let yum_orphan_remove = App {
+                    command: String::from("yum"),
+                    args: vec!["--noconfirm".to_string(), "-Rns".to_string()],
+                };
+                let apps: &[App] = &[pacman_keyring, pacman_update, yum_update];
+                let apps_with_response: &[App] = &[
+                    pacman_orphan_check,
+                    pacman_orphan_remove,
+                    yum_orphan_check,
+                    yum_orphan_remove,
+                ];
 
                 run_apps(apps);
                 run_with_response(apps_with_response);

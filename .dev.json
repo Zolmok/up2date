@@ -3,9 +3,21 @@
   "windows": [
     {
       "name": "Build",
-      "actions": ["cargo watch -x test -x build"],
+      "actions": ["cargo watch -x build"],
       "pwd": ".",
       "select": true
+    },
+    {
+      "name": "Test",
+      "actions": ["cargo watch -x test"],
+      "pwd": ".",
+      "select": false
+    },
+    {
+      "name": "Run",
+      "actions": ["cargo watch -x run"],
+      "pwd": ".",
+      "select": false
     },
     {
       "name": "Code",
