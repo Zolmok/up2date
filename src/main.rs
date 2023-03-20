@@ -92,12 +92,16 @@ fn run_with_cargo(app: App) {
                     if !line.starts_with(' ') {
                         let parts: Vec<&str> = line.split(' ').collect();
                         let cargo_app = parts[0];
-                        let cargo_install_app = App {
-                            command: String::from("cargo"),
-                            args: vec!["install".to_string(), cargo_app.to_string()],
-                        };
 
-                        run_apps(&[cargo_install_app]);
+                        // someone has reserved `tm` on crates.io which collides with my `tm` so skip it
+                        if cargo_app != "tm" {
+                            let cargo_install_app = App {
+                                command: String::from("cargo"),
+                                args: vec!["install".to_string(), cargo_app.to_string()],
+                            };
+
+                            run_apps(&[cargo_install_app]);
+                        }
                     }
                 });
             }
