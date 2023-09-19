@@ -2,6 +2,18 @@
   "session": "up2date",
   "windows": [
     {
+      "name": "Code",
+      "actions": [],
+      "pwd": ".",
+      "select": false
+    },
+    {
+      "name": "Zsh",
+      "actions": [],
+      "pwd": ".",
+      "select": false
+    },
+    {
       "name": "Build",
       "actions": ["cargo watch -x build"],
       "pwd": ".",
@@ -15,18 +27,6 @@
     },
     {
       "name": "Run",
-      "actions": [],
-      "pwd": ".",
-      "select": false
-    },
-    {
-      "name": "Code",
-      "actions": [],
-      "pwd": ".",
-      "select": false
-    },
-    {
-      "name": "Zsh",
       "actions": [],
       "pwd": ".",
       "select": false

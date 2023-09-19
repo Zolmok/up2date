@@ -93,8 +93,8 @@ fn run_with_cargo(app: App) {
                         let parts: Vec<&str> = line.split(' ').collect();
                         let cargo_app = parts[0];
 
-                        // someone has reserved `tm` on crates.io which collides with my `tm` so skip it
-                        if cargo_app != "tm" {
+                        // someone has reserved a couple of names I'm using on crates.io so skip it
+                        if cargo_app != "tm" || cargo_app != "project" {
                             let cargo_install_app = App {
                                 command: String::from("cargo"),
                                 args: vec!["install".to_string(), cargo_app.to_string()],
