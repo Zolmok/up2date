@@ -233,10 +233,8 @@ fn main() {
         command: String::from("nvim"),
         args: vec![
             "--headless".to_string(),
-            "-c".to_string(),
-            "autocmd User PackerComplete quitall".to_string(),
-            "-c".to_string(),
-            "PackerUpdate".to_string(),
+            "+Lazy! sync".to_string(),
+            "+qa".to_string(),
         ],
     };
     let apps: &[App] = &[rust_update, neovim_update];
