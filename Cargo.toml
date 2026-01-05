@@ -5,5 +5,4 @@ authors = ["Ricky Nelson <rickyn@zolmok.com>"]
 edition = "2021"
 
 [dependencies]
-scuttle = { git = "https://github.com/Zolmok/scuttle", tag="v0.4.0" }
 sys-info = "0.9"
