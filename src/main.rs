@@ -12,6 +12,11 @@ struct App {
     args: Vec<String>,
 }
 
+struct CargoApps {
+    to_update: Vec<String>,
+    skipped: Vec<String>,
+}
+
 impl Display for Args {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.0.join(" "))
@@ -66,6 +71,53 @@ fn run_apps(apps: &[App]) -> Result<(), Box<dyn Error>> {
         run_status(app)?;
     }
     Ok(())
+}
+
+/// Run an app optionally - if it fails to execute, print a warning and continue
+///
+/// This function is useful for commands that may not be installed on all systems.
+/// If the command is not found or fails to spawn, a warning is printed and
+/// execution continues rather than returning an error.
+///
+/// # Arguments
+///
+/// * `app` - An app of type `App`
+/// * `description` - A description of what the app does (for warning message)
+fn run_optional(app: &App, description: &str) {
+    println!();
+    println!("========================");
+    println!("$ {} {}", app.command, Args(app.args.to_owned()));
+    println!("========================");
+
+    match Command::new(&app.command).args(&app.args).spawn() {
+        Ok(mut child) => {
+            match child.wait() {
+                Ok(_status) => {}
+                Err(error) => {
+                    println!(
+                        "Warning: {} failed to complete: {}",
+                        description, error
+                    );
+                }
+            }
+        }
+        Err(error) => {
+            match error.kind() {
+                std::io::ErrorKind::NotFound => {
+                    println!(
+                        "Warning: {} not found, skipping {}",
+                        app.command, description
+                    );
+                }
+                _ => {
+                    println!(
+                        "Warning: failed to run {}: {}",
+                        app.command, error
+                    );
+                }
+            }
+        }
+    }
 }
 
 /// Parse orphan package names from command output
@@ -144,29 +196,57 @@ fn run_with_response(apps: &[App]) -> Result<(), Box<dyn Error>> {
 
 /// Parse cargo install --list output to extract app names
 ///
+/// Separates packages into those to update (from crates.io) and those to skip
+/// (locally installed via `cargo install --path`).
+///
 /// # Arguments
 ///
 /// * `output` - The string output from `cargo install --list`
 ///
 /// # Returns
 ///
-/// A vector of app names, excluding indented lines (binaries) and reserved names
-fn parse_cargo_apps(output: &str) -> Vec<String> {
-    output
-        .lines()
-        .filter(|line| !line.starts_with(' '))
-        .filter_map(|line| {
-            let app = line.split(' ').next()?;
-            if !app.is_empty() && app != "tm" && app != "project" {
-                Some(app.to_string())
-            } else {
-                None
+/// A CargoApps struct containing:
+/// - `to_update`: packages from crates.io that should be updated
+/// - `skipped`: locally installed packages (identified by path in parentheses)
+fn parse_cargo_apps(output: &str) -> CargoApps {
+    let mut to_update = Vec::new();
+    let mut skipped = Vec::new();
+
+    for line in output.lines() {
+        // Skip indented lines (these are binary names, not package names)
+        if line.starts_with(' ') {
+            continue;
+        }
+
+        // Extract the package name (first word before space)
+        match line.split(' ').next() {
+            Some(app) => {
+                if app.is_empty() {
+                    continue;
+                }
+
+                // Check if this is a local install (has path in parentheses)
+                // Local: "dev v1.2.0 (/home/user/path/to/dev):"
+                // Crates.io: "bat v0.26.1:"
+                if line.contains("(/") {
+                    skipped.push(app.to_string());
+                } else {
+                    to_update.push(app.to_string());
+                }
             }
-        })
-        .collect()
+            None => {
+                continue;
+            }
+        }
+    }
+
+    CargoApps { to_update, skipped }
 }
 
 /// Parse the output of `cargo install --list` and build a command to update the apps from the list
+///
+/// Locally installed packages (via `cargo install --path`) are skipped with a notice.
+/// Packages from crates.io are updated.
 ///
 /// # Arguments
 ///
@@ -179,10 +259,18 @@ fn run_with_cargo(app: App) -> Result<(), Box<dyn Error>> {
     let output = run_output(&app)?;
     let result = std::str::from_utf8(&output.stdout)?;
 
-    for cargo_app in parse_cargo_apps(result) {
+    let cargo_apps = parse_cargo_apps(result);
+
+    // Print skip notices for local installs
+    for skipped_app in cargo_apps.skipped.iter() {
+        println!("Skipping {} (local install)", skipped_app);
+    }
+
+    // Update packages from crates.io
+    for cargo_app in cargo_apps.to_update.iter() {
         let cargo_install_app = App {
             command: String::from("cargo"),
-            args: vec!["install".to_string(), cargo_app],
+            args: vec!["install".to_string(), cargo_app.clone()],
         };
 
         run_apps(&[cargo_install_app])?;
@@ -302,10 +390,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // update rust, should be the same on all platforms
+    // uses run_optional because rustup may not be installed (e.g., omarchy uses system rust)
     let rust_update = App {
         command: String::from("rustup"),
         args: vec!["update".to_string()],
     };
+    run_optional(&rust_update, "Rust toolchain update");
+
     // update vim
     let neovim_update = App {
         command: String::from("nvim"),
@@ -315,9 +406,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "+qa".to_string(),
         ],
     };
-    let apps: &[App] = &[rust_update, neovim_update];
-
-    run_apps(apps)?;
+    run_apps(&[neovim_update])?;
 
     // update all rust apps installed with cargo
     let cargo_list_apps = App {
@@ -338,27 +427,32 @@ mod tests {
     fn test_parse_cargo_apps_basic() {
         let input = "ripgrep v14.1.0:\n    rg\nbat v0.24.0:\n    bat\n";
         let result = parse_cargo_apps(input);
-        assert_eq!(result, vec!["ripgrep", "bat"]);
+        assert_eq!(result.to_update, vec!["ripgrep", "bat"]);
+        assert!(result.skipped.is_empty());
     }
 
     #[test]
     fn test_parse_cargo_apps_filters_indented_lines() {
         let input = "myapp v1.0.0:\n    myapp\n    myapp-cli\nanotherapp v2.0.0:\n    another\n";
         let result = parse_cargo_apps(input);
-        assert_eq!(result, vec!["myapp", "anotherapp"]);
+        assert_eq!(result.to_update, vec!["myapp", "anotherapp"]);
+        assert!(result.skipped.is_empty());
     }
 
     #[test]
-    fn test_parse_cargo_apps_skips_excluded() {
-        let input = "tm v1.0.0:\n    tm\nproject v2.0.0:\n    project\ngoodapp v3.0.0:\n    goodapp\n";
+    fn test_parse_cargo_apps_skips_local_installs() {
+        // Local installs have path in parentheses, crates.io packages don't
+        let input = "dev v1.2.0 (/home/user/src/dev):\n    dev\nbat v0.24.0:\n    bat\ntm v0.5.0 (/home/user/src/tm):\n    tm\n";
         let result = parse_cargo_apps(input);
-        assert_eq!(result, vec!["goodapp"]);
+        assert_eq!(result.to_update, vec!["bat"]);
+        assert_eq!(result.skipped, vec!["dev", "tm"]);
     }
 
     #[test]
     fn test_parse_cargo_apps_empty_input() {
         let result = parse_cargo_apps("");
-        assert!(result.is_empty());
+        assert!(result.to_update.is_empty());
+        assert!(result.skipped.is_empty());
     }
 
     #[test]
@@ -391,5 +485,27 @@ mod tests {
     fn test_args_display_empty() {
         let args = Args(vec![]);
         assert_eq!(format!("{}", args), "");
+    }
+
+    #[test]
+    fn test_run_optional_handles_missing_command() {
+        // Should not panic when command doesn't exist
+        let app = App {
+            command: String::from("nonexistent_command_that_does_not_exist_12345"),
+            args: vec![],
+        };
+        run_optional(&app, "test operation");
+        // If we get here without panicking, the test passes
+    }
+
+    #[test]
+    fn test_run_optional_handles_valid_command() {
+        // Should not panic when command exists and succeeds
+        let app = App {
+            command: String::from("true"),
+            args: vec![],
+        };
+        run_optional(&app, "test operation");
+        // If we get here without panicking, the test passes
     }
 }
