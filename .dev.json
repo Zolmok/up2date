@@ -3,7 +3,7 @@
   "windows": [
     {
       "name": "Code",
-      "actions": [],
+      "actions": ["nvim"],
       "pwd": ".",
       "select": true
     },
@@ -14,20 +14,8 @@
       "select": false
     },
     {
-      "name": "Build",
-      "actions": ["cargo watch -x build"],
-      "pwd": ".",
-      "select": false
-    },
-    {
-      "name": "Test",
-      "actions": ["cargo watch -x test"],
-      "pwd": ".",
-      "select": false
-    },
-    {
-      "name": "Run",
-      "actions": [],
+      "name": "Claude",
+      "actions": ["claude"],
       "pwd": ".",
       "select": false
     }
