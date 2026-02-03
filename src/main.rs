@@ -5,6 +5,10 @@ use std::process::{Command, ExitStatus, Output};
 
 use sys_info::*;
 
+/// Cargo apps to exclude from updates regardless of install source.
+/// These are local development tools that should not be reinstalled from crates.io.
+const EXCLUDED_CARGO_APPS: &[&str] = &["tm", "project"];
+
 struct Args(Vec<String>);
 
 struct App {
@@ -31,12 +35,25 @@ impl Display for Args {
 ///
 /// # Errors
 ///
-/// Returns an error if the command fails to spawn or wait
-fn run_status(app: &App) -> Result<ExitStatus, std::io::Error> {
-    Command::new(&app.command)
+/// Returns an error if the command fails to spawn, wait, or exits with a non-zero status
+fn run_status(app: &App) -> Result<ExitStatus, Box<dyn Error>> {
+    let status = Command::new(&app.command)
         .args(&app.args)
         .spawn()?
-        .wait()
+        .wait()?;
+
+    match status.success() {
+        true => Ok(status),
+        false => {
+            Err(format!(
+                "{} {} exited with {}",
+                app.command,
+                Args(app.args.to_owned()),
+                status
+            )
+            .into())
+        }
+    }
 }
 
 /// Run an app and return its output
@@ -226,9 +243,10 @@ fn parse_cargo_apps(output: &str) -> CargoApps {
                 }
 
                 // Check if this is a local install (has path in parentheses)
+                // or is in the exclusion list
                 // Local: "dev v1.2.0 (/home/user/path/to/dev):"
                 // Crates.io: "bat v0.26.1:"
-                if line.contains("(/") {
+                if line.contains("(/") || EXCLUDED_CARGO_APPS.contains(&app) {
                     skipped.push(app.to_string());
                 } else {
                     to_update.push(app.to_string());
@@ -446,6 +464,15 @@ mod tests {
         let result = parse_cargo_apps(input);
         assert_eq!(result.to_update, vec!["bat"]);
         assert_eq!(result.skipped, vec!["dev", "tm"]);
+    }
+
+    #[test]
+    fn test_parse_cargo_apps_skips_excluded_apps() {
+        // "project" from crates.io (no path) should still be skipped via EXCLUDED_CARGO_APPS
+        let input = "bat v0.24.0:\n    bat\nproject v0.1.1:\n    project\ntm v0.5.0:\n    tm\n";
+        let result = parse_cargo_apps(input);
+        assert_eq!(result.to_update, vec!["bat"]);
+        assert_eq!(result.skipped, vec!["project", "tm"]);
     }
 
     #[test]
