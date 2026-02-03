@@ -336,6 +336,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         "pacman".to_string(),
                         "--noconfirm".to_string(),
                         "-S".to_string(),
+                        "--needed".to_string(),
                         "archlinux-keyring".to_string(),
                     ],
                 };
